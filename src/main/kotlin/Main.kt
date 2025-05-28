@@ -1,3 +1,4 @@
+// Import necessary libraries and components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -20,40 +21,49 @@ import java.awt.image.BufferedImage
 import java.net.URL
 import javax.imageio.ImageIO
 
-// Configure JSON parser to ignore unknown keys
+// Configure JSON parser to ignore extra fields we don't need from the API
 val jsonParser = Json {
-    ignoreUnknownKeys = true
+    ignoreUnknownKeys = true  // Skip any unexpected data from the API
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-fun main() = application {
+// The main function that launches our desktop application
+@OptIn(ExperimentalMaterial3Api::class)  // Allow using new Material 3 features
+fun main() = application {  // Create a desktop window
     Window(
-        onCloseRequest = ::exitApplication,
-        title = "Pokemon App - Mewtwo"
+        onCloseRequest = ::exitApplication,  // Close app when window is closed
+        title = "Pokemon App - Mewtwo"  // Window title
     ) {
+        // Use Material Design styling
         MaterialTheme {
-            var clickCount by remember { mutableStateOf(0) }
-            var pokemonData by remember { mutableStateOf<Pokemon?>(null) }
-            var isLoading by remember { mutableStateOf(false) }
-            var error by remember { mutableStateOf<String?>(null) }
+            // State variables to track:
+            var clickCount by remember { mutableStateOf(0) }  // Button clicks
+            var pokemonData by remember { mutableStateOf<Pokemon?>(null) }  // Pokemon data
+            var isLoading by remember { mutableStateOf(false) }  // Loading status
+            var error by remember { mutableStateOf<String?>(null) }  // Error messages
 
+            // Load Pokemon data when app starts
             LaunchedEffect(Unit) {
-                isLoading = true
+                isLoading = true  // Show loading spinner
                 try {
+                    // Fetch Mewtwo's data from API
                     pokemonData = fetchPokemonData("mewtwo")
-                    error = null
+                    error = null  // Clear any previous errors
                 } catch (e: Exception) {
+                    // Show error if something goes wrong
                     error = e.message ?: "Failed to load Pokemon data"
                 } finally {
-                    isLoading = false
+                    isLoading = false  // Hide loading spinner
                 }
             }
 
+            // Main app layout
             Scaffold(
                 topBar = {
+                    // App bar at top of screen
                     TopAppBar(
                         title = { Text("Mewtwo Data from PokeAPI") },
                         actions = {
+                            // Game controller icon button
                             IconButton(onClick = { /* Action */ }) {
                                 Icon(
                                     imageVector = Icons.Default.VideogameAsset,
@@ -64,48 +74,55 @@ fun main() = application {
                     )
                 }
             ) { padding ->
+                // Main content column
                 Column(
                     Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .fillMaxSize()  // Take up all available space
+                        .padding(padding)  // Add spacing from app bar
+                        .padding(16.dp),  // Add padding around edges
+                    verticalArrangement = Arrangement.spacedBy(16.dp),  // Space between items
+                    horizontalAlignment = Alignment.CenterHorizontally  // Center everything
                 ) {
                     // Button Counter Section
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Show click count
                         Text(
                             "Button clicked $clickCount times",
                             style = MaterialTheme.typography.headlineSmall
                         )
+                        // Clickable button
                         Button(
-                            onClick = { clickCount++ },
-                            modifier = Modifier.widthIn(min = 200.dp)
+                            onClick = { clickCount++ },  // Increase count when clicked
+                            modifier = Modifier.widthIn(min = 200.dp)  // Minimum width
                         ) {
                             Text("Click Me!")
                         }
                     }
 
-                    // Pokemon Data Section
+                    // Pokemon Data Section - shows different views based on state
                     when {
-                        isLoading -> CircularProgressIndicator()
+                        isLoading -> CircularProgressIndicator()  // Loading spinner
                         error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
-                        pokemonData != null -> {
+                        pokemonData != null -> {  // Show Pokemon data when loaded
                             val pokemon = pokemonData!!
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                // Pokemon name (capitalized)
                                 Text(
                                     pokemon.name.replaceFirstChar { it.uppercase() },
                                     style = MaterialTheme.typography.headlineMedium
                                 )
+                                // Height (converted from decimeters to meters)
                                 Text("Height: ${pokemon.height / 10.0} m")
+                                // Weight (converted from hectograms to kilograms)
                                 Text("Weight: ${pokemon.weight / 10.0} kg")
 
+                                // Load and show Pokemon image if URL exists
                                 pokemon.sprites.frontDefault?.let { imageUrl ->
                                     AsyncImage(
                                         imageUrl = imageUrl,
@@ -122,37 +139,42 @@ fun main() = application {
     }
 }
 
+// Custom component to load and display images from URLs
 @Composable
 fun AsyncImage(
-    imageUrl: String,
-    contentDescription: String,
-    modifier: Modifier = Modifier
+    imageUrl: String,  // URL of image to load
+    contentDescription: String,  // Accessibility description
+    modifier: Modifier = Modifier  // Size/positioning modifiers
 ) {
-    var image by remember { mutableStateOf<ImageBitmap?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+    // State variables:
+    var image by remember { mutableStateOf<ImageBitmap?>(null) }  // Loaded image
+    var isLoading by remember { mutableStateOf(true) }  // Loading status
+    var error by remember { mutableStateOf<String?>(null) }  // Error message
 
+    // Load image when URL changes
     LaunchedEffect(imageUrl) {
         try {
+            // Load in background thread to avoid freezing UI
             val loadedImage = withContext(Dispatchers.IO) {
-                val inputStream = URL(imageUrl).openStream()
-                val bufferedImage = ImageIO.read(inputStream)
-                bufferedImage.toComposeImageBitmap()
+                val inputStream = URL(imageUrl).openStream()  // Open connection
+                val bufferedImage = ImageIO.read(inputStream)  // Read image data
+                bufferedImage.toComposeImageBitmap()  // Convert to Compose format
             }
-            image = loadedImage
-            error = null
+            image = loadedImage  // Store loaded image
+            error = null  // Clear errors
         } catch (e: Exception) {
-            error = e.message ?: "Failed to load image"
+            error = e.message ?: "Failed to load image"  // Show error
         } finally {
-            isLoading = false
+            isLoading = false  // Loading complete
         }
     }
 
+    // Show different views based on state
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         when {
-            isLoading -> CircularProgressIndicator()
+            isLoading -> CircularProgressIndicator()  // Loading spinner
             error != null -> Text("Image load failed", color = MaterialTheme.colorScheme.error)
-            image != null -> Image(
+            image != null -> Image(  // Show actual image when loaded
                 bitmap = image!!,
                 contentDescription = contentDescription,
                 modifier = modifier
@@ -161,17 +183,20 @@ fun AsyncImage(
     }
 }
 
+// Convert Java's BufferedImage to Compose's ImageBitmap
 fun BufferedImage.toComposeImageBitmap(): ImageBitmap {
     val width = this.width
     val height = this.height
-    val imageBitmap = ImageBitmap(width, height)
-    val canvas = Canvas(imageBitmap)
-    val paint = Paint()
+    val imageBitmap = ImageBitmap(width, height)  // Create blank image
+    val canvas = Canvas(imageBitmap)  // Get drawing canvas
+    val paint = Paint()  // Create paint brush
 
+    // Copy each pixel from source to destination
     for (x in 0 until width) {
         for (y in 0 until height) {
-            val color = Color(this.getRGB(x, y))
-            paint.color = color
+            val color = Color(this.getRGB(x, y))  // Get pixel color
+            paint.color = color  // Set brush color
+            // Draw a 1x1 pixel rectangle
             canvas.drawRect(
                 Rect(
                     left = x.toFloat(),
@@ -184,28 +209,34 @@ fun BufferedImage.toComposeImageBitmap(): ImageBitmap {
         }
     }
 
-    return imageBitmap
+    return imageBitmap  // Return the new image
 }
 
-@Serializable
+// Data class for Pokemon information from API
+@Serializable  // Mark as serializable for JSON parsing
 data class Pokemon(
-    val name: String,
-    val height: Int,
-    val weight: Int,
-    val sprites: Sprites
+    val name: String,  // Pokemon name
+    val height: Int,  // Height in decimeters (10cm units)
+    val weight: Int,  // Weight in hectograms (100g units)
+    val sprites: Sprites  // Image URLs
 )
 
+// Data class for Pokemon images
 @Serializable
 data class Sprites(
-    val front_default: String? = null
+    val front_default: String? = null  // Default front image URL
 ) {
+    // Better-named property for the same value
     val frontDefault: String? get() = front_default
 }
 
+// Fetch Pokemon data from PokeAPI
 suspend fun fetchPokemonData(pokemonName: String): Pokemon {
+    // Run in background thread to avoid freezing UI
     return withContext(Dispatchers.IO) {
         val url = URL("https://pokeapi.co/api/v2/pokemon/$pokemonName")
-        url.openStream().use { stream ->
+        url.openStream().use { stream ->  // Automatically close connection
+            // Parse JSON response into Pokemon object
             jsonParser.decodeFromString<Pokemon>(stream.bufferedReader().readText())
         }
     }
